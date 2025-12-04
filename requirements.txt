@@ -1,0 +1,28 @@
+# SysAdmin Portfolio - Production Dependencies
+# Python 3.9+ required
+
+# Network monitoring tools
+ping3>=4.0.4                    # ICMP ping implementation
+pysnmp>=7.1.0                   # SNMP queries for network devices
+dnspython>=2.4.0                # DNS lookups and queries
+
+# CLI framework
+typer[all]>=0.9.0               # CLI framework with type hints
+rich>=13.0.0                    # Beautiful terminal output
+
+# Data validation
+pydantic>=2.0.0                 # Data models and validation
+pydantic-settings>=2.0.0        # Settings management
+
+# Configuration
+python-dotenv>=1.0.0            # Environment variable management
+pyyaml>=6.0.0                   # YAML configuration files
+
+# System utilities
+psutil>=5.9.0                   # System and process information
+
+# Remote access
+paramiko>=3.0.0                 # SSH connections
+
+# HTTP client
+httpx>=0.25.0                   # Async HTTP client

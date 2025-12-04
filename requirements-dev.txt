@@ -1,0 +1,20 @@
+# SysAdmin Portfolio - Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Include production dependencies
+-r requirements.txt
+
+# Testing
+pytest>=7.0.0                   # Test framework
+pytest-asyncio>=0.21.0          # Async test support
+pytest-cov>=4.0.0               # Coverage reporting
+pytest-mock>=3.10.0             # Mocking utilities
+
+# Code quality
+mypy>=1.0.0                     # Static type checking
+ruff>=0.1.0                     # Fast linter
+black>=23.0.0                   # Code formatter
+
+# Type stubs for better type checking
+types-PyYAML>=6.0.0             # YAML type stubs
+types-psutil>=5.9.0             # psutil type stubs
