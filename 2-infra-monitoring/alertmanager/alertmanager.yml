@@ -1,0 +1,184 @@
+# Alertmanager Configuration
+# ==========================
+# Riasztás kezelési és értesítési konfiguráció.
+#
+# Receiver típusok:
+# - Email (SMTP)
+# - Webhook (általános HTTP)
+# - Slack (opcionális)
+#
+# Használat:
+#   A riasztások a Prometheus-ból érkeznek, és a megfelelő
+#   receiver-hez kerülnek a route szabályok alapján.
+
+global:
+  # SMTP konfiguráció email értesítésekhez
+  # Valós környezetben állítsd be a megfelelő SMTP szervert
+  smtp_smarthost: "smtp.example.com:587"
+  smtp_from: "alertmanager@example.com"
+  smtp_auth_username: "alertmanager@example.com"
+  smtp_auth_password: "${SMTP_PASSWORD}"
+  smtp_require_tls: true
+
+  # Webhook timeout
+  http_config:
+    follow_redirects: true
+
+  # Resolve timeout - mennyi ideig várunk mielőtt resolved státuszba kerül
+  resolve_timeout: 5m
+
+# Értesítési sablonok
+templates:
+  - "/etc/alertmanager/templates/*.tmpl"
+
+# Route konfiguráció
+# A riasztások útválasztása a címkék alapján
+route:
+  # Alapértelmezett receiver
+  receiver: "default-receiver"
+
+  # Csoportosítási beállítások
+  # A riasztások ezek alapján kerülnek csoportosításra
+  group_by: ["alertname", "severity", "instance"]
+
+  # Várakozási idő mielőtt az első értesítés kiküldésre kerül
+  group_wait: 30s
+
+  # Várakozási idő a csoport következő értesítése előtt
+  group_interval: 5m
+
+  # Ismétlési intervallum még nem megoldott riasztásokhoz
+  repeat_interval: 4h
+
+  # Gyermek route-ok specifikus szabályokkal
+  routes:
+    # Kritikus riasztások azonnali értesítéssel
+    - match:
+        severity: critical
+      receiver: "critical-receiver"
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: false
+
+    # Warning riasztások
+    - match:
+        severity: warning
+      receiver: "warning-receiver"
+      group_wait: 1m
+      repeat_interval: 4h
+      continue: false
+
+    # Info szintű riasztások (opcionális logolás)
+    - match:
+        severity: info
+      receiver: "info-receiver"
+      group_wait: 5m
+      repeat_interval: 12h
+      continue: false
+
+    # Infrastruktúra specifikus riasztások
+    - match_re:
+        alertname: "^(Prometheus|Grafana|Alertmanager).*"
+      receiver: "infra-receiver"
+      continue: false
+
+# Inhibit szabályok
+# Megakadályozza az alacsonyabb prioritású riasztásokat,
+# ha magasabb prioritású már aktív
+inhibit_rules:
+  # Critical elnyomja a warning-ot ugyanazon instance-ről
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "instance"]
+
+  # Critical elnyomja az info-t
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "info"
+    equal: ["alertname", "instance"]
+
+  # Warning elnyomja az info-t
+  - source_match:
+      severity: "warning"
+    target_match:
+      severity: "info"
+    equal: ["alertname", "instance"]
+
+# Receiver definíciók
+receivers:
+  # Alapértelmezett receiver (webhook)
+  - name: "default-receiver"
+    webhook_configs:
+      - url: "http://localhost:5001/webhook"
+        send_resolved: true
+        # Ha nincs webhook endpoint, ez sikertelen lesz, de nem okoz problémát
+
+  # Kritikus riasztások receiver-je
+  - name: "critical-receiver"
+    # Email értesítés
+    email_configs:
+      - to: "oncall@example.com"
+        send_resolved: true
+        headers:
+          subject: "[CRITICAL] {{ .GroupLabels.alertname }}"
+        html: |
+          <h2>Critical Alert</h2>
+          <p><strong>Alert:</strong> {{ .GroupLabels.alertname }}</p>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          {{ range .Alerts }}
+          <hr>
+          <p><strong>Instance:</strong> {{ .Labels.instance }}</p>
+          <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          {{ end }}
+    # Webhook (pl. PagerDuty, OpsGenie integráció)
+    webhook_configs:
+      - url: "http://localhost:5001/webhook/critical"
+        send_resolved: true
+
+  # Warning riasztások receiver-je
+  - name: "warning-receiver"
+    email_configs:
+      - to: "team@example.com"
+        send_resolved: true
+        headers:
+          subject: "[WARNING] {{ .GroupLabels.alertname }}"
+    webhook_configs:
+      - url: "http://localhost:5001/webhook/warning"
+        send_resolved: true
+
+  # Info szintű riasztások (csak webhook)
+  - name: "info-receiver"
+    webhook_configs:
+      - url: "http://localhost:5001/webhook/info"
+        send_resolved: false
+
+  # Infrastruktúra riasztások
+  - name: "infra-receiver"
+    email_configs:
+      - to: "infra-team@example.com"
+        send_resolved: true
+        headers:
+          subject: "[INFRA] {{ .GroupLabels.alertname }}"
+    webhook_configs:
+      - url: "http://localhost:5001/webhook/infra"
+        send_resolved: true
+
+# =========================================
+# MEGJEGYZÉS
+# =========================================
+# Valós környezetben:
+# 1. Állítsd be a megfelelő SMTP szervert
+# 2. Konfiguráld a webhook URL-eket
+# 3. Opcionálisan add hozzá a Slack/Teams integrációt:
+#
+# slack_configs:
+#   - api_url: "${SLACK_WEBHOOK_URL}"
+#     channel: "#alerts"
+#     send_resolved: true
+#
+# A környezeti változókat a docker-compose.yml-ben
+# vagy .env fájlban definiáld.

@@ -1,0 +1,51 @@
+# Grafana Dashboard Provisioning
+# ===============================
+# Automatikus dashboard betöltés Grafana indításkor.
+#
+# A dashboardok a /var/lib/grafana/dashboards mappából
+# töltődnek be JSON formátumban.
+
+apiVersion: 1
+
+# Dashboard provider definíciók
+providers:
+  # =========================================
+  # DEFAULT PROVIDER - Fő dashboard könyvtár
+  # =========================================
+  - name: "default"
+    # Egyedi azonosító
+    orgId: 1
+    # Mappa neve a Grafana UI-ban
+    folder: ""
+    # Mappa UID (üres = gyökér)
+    folderUid: ""
+    # Provider típus (file = fájlrendszer)
+    type: file
+    # Frissítés letiltása a UI-ról
+    disableDeletion: false
+    # Szerkesztés engedélyezése
+    editable: true
+    # Frissítési intervallum (másodperc)
+    updateIntervalSeconds: 30
+    # Fájl beállítások
+    options:
+      # Dashboard JSON fájlok helye
+      path: /var/lib/grafana/dashboards
+      # Almappák keresése
+      foldersFromFilesStructure: false
+
+  # =========================================
+  # INFRASTRUCTURE - Infrastruktúra dashboardok
+  # =========================================
+  # Ha külön mappába szeretnéd rendezni:
+  #
+  # - name: "infrastructure"
+  #   orgId: 1
+  #   folder: "Infrastructure"
+  #   folderUid: "infra"
+  #   type: file
+  #   disableDeletion: false
+  #   editable: true
+  #   updateIntervalSeconds: 30
+  #   options:
+  #     path: /var/lib/grafana/dashboards/infrastructure

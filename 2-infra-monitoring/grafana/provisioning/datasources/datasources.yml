@@ -1,0 +1,64 @@
+# Grafana Datasources Provisioning
+# =================================
+# Automatikus datasource konfiguráció Grafana indításkor.
+#
+# A datasource-ok a docker-compose network-ön keresztül
+# érhetők el a service nevükkel.
+
+apiVersion: 1
+
+# Törlendő datasource-ok (opcionális)
+deleteDatasources: []
+
+# Datasource definíciók
+datasources:
+  # =========================================
+  # PROMETHEUS - Fő metrika forrás
+  # =========================================
+  - name: Prometheus
+    type: prometheus
+    # Alapértelmezett datasource
+    isDefault: true
+    # Hozzáférési mód (proxy = Grafana szerveren keresztül)
+    access: proxy
+    # URL a docker network-ön keresztül
+    url: http://prometheus:9090
+    # Alapértelmezett scrape intervallum
+    jsonData:
+      timeInterval: "15s"
+      # HTTP method
+      httpMethod: POST
+      # Increment queries
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: 10m
+    # Editable-e a UI-n
+    editable: false
+    # Verzió (auto increment)
+    version: 1
+
+  # =========================================
+  # ALERTMANAGER - Riasztás állapotok
+  # =========================================
+  - name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    jsonData:
+      # Implementation type
+      implementation: prometheus
+    editable: false
+    version: 1
+
+  # =========================================
+  # LOKI - Log aggregáció (opcionális)
+  # =========================================
+  # Ha Loki-t használsz log gyűjtéshez, add hozzá:
+  #
+  # - name: Loki
+  #   type: loki
+  #   access: proxy
+  #   url: http://loki:3100
+  #   jsonData:
+  #     maxLines: 1000
+  #   editable: false
+  #   version: 1

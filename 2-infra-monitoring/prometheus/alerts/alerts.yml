@@ -1,0 +1,285 @@
+# Prometheus Alert Rules
+# ======================
+# Riasztási szabályok a rendszer monitorozásához.
+#
+# Kategóriák:
+# - Host (CPU, memória, lemez)
+# - Container (Docker)
+# - Szolgáltatás (endpoints)
+# - Hálózat (connectivity)
+
+groups:
+  # =========================================
+  # HOST ALERTS - CPU, Memory, Disk
+  # =========================================
+  - name: host_alerts
+    rules:
+      # Magas CPU használat
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Kritikus CPU használat
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 95% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Magas memória használat
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Kritikus memória használat
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 95% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Alacsony szabad lemezterület
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 20% free space (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Kritikusan alacsony lemezterület
+      - alert: CriticalDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} has less than 10% free space (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Magas lemez I/O wait
+      - alert: HighDiskIOWait
+        expr: rate(node_cpu_seconds_total{mode="iowait"}[5m]) * 100 > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O wait on {{ $labels.instance }}"
+          description: "Disk I/O wait is above 30% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Node Exporter nem elérhető
+      - alert: NodeExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node Exporter is down on {{ $labels.instance }}"
+          description: "Node Exporter has been unreachable for more than 1 minute"
+
+  # =========================================
+  # CONTAINER ALERTS - Docker
+  # =========================================
+  - name: container_alerts
+    rules:
+      # Container leállt
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name!=""})
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is down"
+          description: "Container has not been seen for more than 1 minute"
+
+      # Magas container CPU használat
+      - alert: ContainerHighCPU
+        expr: (sum by(name) (rate(container_cpu_usage_seconds_total{name!=""}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage in container {{ $labels.name }}"
+          description: "Container CPU usage is above 80% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Magas container memória használat
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage in container {{ $labels.name }}"
+          description: "Container memory usage is above 80% of limit (current: {{ $value | printf \"%.1f\" }}%)"
+
+      # Container újraindult
+      - alert: ContainerRestarted
+        expr: increase(container_restart_count{name!=""}[15m]) > 0
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "Container {{ $labels.name }} has restarted"
+          description: "Container has restarted {{ $value | printf \"%.0f\" }} time(s) in the last 15 minutes"
+
+  # =========================================
+  # SERVICE ALERTS - Endpoints
+  # =========================================
+  - name: service_alerts
+    rules:
+      # Prometheus nem elérhető
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus instance has been unreachable for more than 1 minute"
+
+      # Grafana nem elérhető
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana has been unreachable for more than 1 minute"
+
+      # Alertmanager nem elérhető
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager is down"
+          description: "Alertmanager has been unreachable for more than 1 minute"
+
+      # HTTP endpoint nem elérhető
+      - alert: HTTPEndpointDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP endpoint {{ $labels.instance }} is down"
+          description: "HTTP probe has been failing for more than 1 minute"
+
+      # Lassú HTTP válasz
+      - alert: SlowHTTPResponse
+        expr: probe_duration_seconds{job="blackbox-http"} > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow HTTP response from {{ $labels.instance }}"
+          description: "HTTP response time is above 2 seconds (current: {{ $value | printf \"%.2f\" }}s)"
+
+  # =========================================
+  # NETWORK ALERTS - Connectivity
+  # =========================================
+  - name: network_alerts
+    rules:
+      # ICMP ping sikertelen
+      - alert: ICMPProbeFailed
+        expr: probe_success{job="blackbox-icmp"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ICMP probe to {{ $labels.instance }} is failing"
+          description: "ICMP probe has been failing for more than 2 minutes"
+
+      # TCP kapcsolat sikertelen
+      - alert: TCPConnectionFailed
+        expr: probe_success{job="blackbox-tcp"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TCP connection to {{ $labels.instance }} is failing"
+          description: "TCP probe has been failing for more than 1 minute"
+
+      # Magas hálózati forgalom
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[5m]) * 8 / 1000000 > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network traffic on {{ $labels.instance }}"
+          description: "Network receive rate is above 100 Mbps on {{ $labels.device }} (current: {{ $value | printf \"%.1f\" }} Mbps)"
+
+      # Hálózati hibák
+      - alert: NetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 0 or rate(node_network_transmit_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network errors detected on {{ $labels.instance }}"
+          description: "Network errors detected on interface {{ $labels.device }}"
+
+  # =========================================
+  # PROMETHEUS ALERTS - Self-monitoring
+  # =========================================
+  - name: prometheus_alerts
+    rules:
+      # Prometheus konfiguráció reload sikertelen
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Configuration reload has been failing"
+
+      # Prometheus rule evaluation lassú
+      - alert: PrometheusRuleEvaluationSlow
+        expr: prometheus_rule_group_last_duration_seconds > prometheus_rule_group_interval_seconds
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus rule evaluation is slow"
+          description: "Rule group {{ $labels.rule_group }} is taking longer than its interval to evaluate"
+
+      # Prometheus target scrape sikertelen
+      - alert: PrometheusTargetScrapeFailed
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target {{ $labels.job }} scrape failed"
+          description: "Target {{ $labels.instance }} has been down for more than 5 minutes"
+
+      # Prometheus storage magas
+      - alert: PrometheusStorageHigh
+        expr: prometheus_tsdb_storage_blocks_bytes / 1024 / 1024 / 1024 > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus storage is high"
+          description: "Prometheus storage is above 10GB (current: {{ $value | printf \"%.1f\" }}GB)"
