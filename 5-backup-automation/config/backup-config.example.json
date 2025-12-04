@@ -1,0 +1,23 @@
+{
+  "name": "home-backup",
+  "source_path": "/home/user",
+  "destination_path": "/backups",
+  "backup_type": "full",
+  "compression": true,
+  "encryption": false,
+  "retention_policy": {
+    "keep_daily": 7,
+    "keep_weekly": 4,
+    "keep_monthly": 6,
+    "keep_yearly": 1,
+    "min_backups": 3
+  },
+  "exclude_patterns": [
+    "*.tmp",
+    "*.log",
+    ".cache/*",
+    "node_modules/*"
+  ],
+  "schedule_cron": "0 2 * * *",
+  "enabled": true
+}
