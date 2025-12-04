@@ -43,27 +43,198 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 
 # Run network health checker
-python -m network_tools.cli --help
+python -m network_health_checker.cli --help
+
+# Run SysAdmin toolkit
+python -m toolkit health
+
+# Start monitoring stack
+cd 2-infra-monitoring && docker-compose up -d
+```
+
+### Features Showcase
+
+#### 🌐 Network Health Checker
+```bash
+# Ping monitoring with batch processing
+python -m network_health_checker.cli ping 8.8.8.8 --count 10
+
+# Port scanning
+python -m network_health_checker.cli scan 192.168.1.1 --ports 22,80,443
+
+# DNS queries (all record types)
+python -m network_health_checker.cli dns google.com
+
+# SNMP device queries
+python -m network_health_checker.cli snmp 192.168.1.1 --community public
+
+# Subnet calculations
+python -m network_health_checker.cli subnet 192.168.1.0/24
+```
+
+#### 🔧 SysAdmin Toolkit
+```bash
+# System health monitoring
+python -m toolkit health
+python -m toolkit processes --count 10 --sort cpu
+
+# Log analysis
+python -m toolkit logs /var/log/syslog
+
+# Disk analysis
+python -m toolkit large-files /var/log --min-size 100
+
+# Service management
+python -m toolkit services --state running
+python -m toolkit check-services sshd nginx
+```
+
+#### 📊 Infrastructure Monitoring
+```bash
+# Start the monitoring stack
+cd 2-infra-monitoring
+docker-compose up -d
+
+# Access:
+# - Grafana: http://localhost:3000 (admin/admin)
+# - Prometheus: http://localhost:9090
+# - Alertmanager: http://localhost:9093
+```
+
+#### 💾 Backup Automation
+```python
+from backup_manager import BackupManager, BackupConfig, RetentionPolicy
+
+config = BackupConfig(
+    name="home-backup",
+    source_path="/home/user",
+    destination_path="/backups",
+    retention_policy=RetentionPolicy(keep_daily=7, keep_weekly=4)
+)
+
+manager = BackupManager()
+result = manager.create_backup(config)
+```
+
+#### 💼 M365 Admin Scripts
+```powershell
+# Connect to Microsoft 365
+.\4-m365-admin-scripts\common\Connect-M365.ps1
+Connect-M365Services
+
+# Get users, groups, licenses
+.\users\Get-M365Users.ps1 -ExportPath users.csv
+.\groups\Get-M365Groups.ps1 -IncludeMembers
+.\licenses\Get-M365Licenses.ps1
+.\reports\Get-M365InactiveUsers.ps1 -DaysInactive 90
 ```
 
 ### Project Structure
 
 ```
 sysadmin-portfolio/
-├── 1-sysadmin-toolkit/        # Python + Bash utility scripts
-├── 2-infra-monitoring/        # Docker + Prometheus + Grafana
-├── 3-network-health-checker/  # Python + SNMP/ICMP
-├── 4-m365-admin-scripts/      # PowerShell M365 automation
-├── 5-backup-automation/       # Backup framework
-├── 6-homelab-docs/            # Documentation
-└── README.md                  # This file
+├── 1-sysadmin-toolkit/              # System administration utilities
+│   ├── toolkit/                     # Python package
+│   │   ├── log_analyzer.py         # Syslog/auth.log parsing
+│   │   ├── system_health.py        # CPU/memory/disk monitoring
+│   │   ├── disk_analyzer.py        # Disk space analysis
+│   │   ├── service_manager.py      # Systemd service management
+│   │   └── cli.py                  # Typer CLI interface
+│   └── scripts/                     # Bash scripts
+│       ├── system-report.sh        # System report generator
+│       └── log-cleanup.sh          # Log cleanup with retention
+│
+├── 2-infra-monitoring/              # Complete monitoring stack
+│   ├── docker-compose.yml          # 6 services stack definition
+│   ├── prometheus/                  # Prometheus config
+│   │   ├── prometheus.yml          # Scrape configs
+│   │   └── alerts/                 # 40+ alert rules
+│   ├── grafana/                    # Grafana config
+│   │   ├── provisioning/           # Auto-provisioning
+│   │   └── dashboards/             # 3 pre-built dashboards
+│   ├── alertmanager/               # Alert routing
+│   └── blackbox/                   # Endpoint probes
+│
+├── network_health_checker/          # Network diagnostics (renamed from 3-)
+│   ├── models.py                   # Pydantic v2 models
+│   ├── config.py                   # Environment config
+│   ├── network_tools/              # Network utilities
+│   │   ├── ping_monitor.py         # ICMP ping (batch)
+│   │   ├── port_scanner.py         # TCP port scanning
+│   │   ├── dns_lookup.py           # DNS all record types
+│   │   ├── subnet_calculator.py    # IP/subnet calculations
+│   │   ├── snmp_query.py           # SNMP v2c (async)
+│   │   └── network_info.py         # Local network info
+│   └── cli.py                      # Typer CLI
+│
+├── 4-m365-admin-scripts/            # Microsoft 365 automation
+│   ├── common/                      # Connection module
+│   ├── users/                       # User management
+│   ├── groups/                      # Group management
+│   ├── licenses/                    # License reporting
+│   └── reports/                     # Inactive users, etc.
+│
+├── 5-backup-automation/             # Backup framework
+│   ├── backup_manager/              # Python package
+│   │   ├── manager.py              # Backup creation
+│   │   ├── retention.py            # Retention policies
+│   │   └── verifier.py             # Integrity checks
+│   ├── scripts/                     # Bash scripts
+│   └── config/                      # Configuration examples
+│
+├── 6-homelab-docs/                  # Professional documentation
+│   ├── architecture/                # Network diagrams
+│   ├── inventory/                   # Server inventory
+│   ├── runbooks/                    # Incident response
+│   └── templates/                   # Change requests
+│
+├── tests/                           # 226+ unit tests
+│   ├── test_network_health_checker/ # 118 tests
+│   ├── test_sysadmin_toolkit/      # 90 tests
+│   └── test_backup_automation/     # 18 tests
+│
+├── requirements.txt                 # Python dependencies
+├── pyproject.toml                   # Project configuration
+└── README.md                        # This file
 ```
+
+### Project Statistics
+
+| Metric | Count |
+|--------|-------|
+| Python Modules | 15+ |
+| PowerShell Scripts | 5 |
+| Bash Scripts | 4 |
+| Docker Services | 6 |
+| Unit Tests | 226+ |
+| Grafana Dashboards | 3 |
+| Alert Rules | 40+ |
+| Lines of Code | 5000+ |
+
+### Technologies Used
+
+**Languages:**
+- Python 3.12 (Pydantic v2, FastAPI patterns)
+- PowerShell 7
+- Bash
+
+**Frameworks & Libraries:**
+- **Python:** psutil, typer, rich, pydantic, pysnmp, dnspython, ping3
+- **Monitoring:** Prometheus, Grafana, Alertmanager, Node Exporter, cAdvisor, Blackbox Exporter
+- **M365:** Microsoft.Graph PowerShell SDK
+- **Testing:** pytest, pytest-mock, pytest-asyncio
+
+**Infrastructure:**
+- Docker & Docker Compose
+- Linux (Ubuntu 22.04)
+- Git & GitHub workflows
 
 ### Requirements
 
 - Python 3.9+
-- Docker & Docker Compose
+- Docker & Docker Compose v2.0+
 - PowerShell 7+ (for M365 scripts)
+- Linux host (for full functionality)
 
 ### License
 
